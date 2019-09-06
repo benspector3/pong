@@ -1,0 +1,38 @@
+body {
+  background-color: black;
+}
+
+#score, #paused {
+  color: white;
+  text-align: center;
+}
+
+#ball, .paddle {
+  display: block;
+  position: absolute;
+  user-select: none;
+}
+
+#ball {
+  width: 20px;
+  height: 20px;
+  background-color: white;
+  border-radius: 20px;
+}
+
+.paddle {
+  width: 20px;
+  height: 80px;
+}
+
+#paddle-left {
+  background-color: green;
+}
+
+#paddle-right {
+  background-color: blue;
+}
+
+#paused {
+  display: none;
+}
