@@ -54,7 +54,7 @@ function init() {
   
   // ball
   ball = {}
-  ball.element = $('<div>').attr('id', 'ball').appendTo(BOARD);
+  ball.element = $('#ball');
   ball.directionX = Math.random() > 0.5 ? -1 : 1;
   ball.directionY = Math.random() > 0.5 ? -1 : 1;
   ball.x = GAME_WIDTH / 2;
