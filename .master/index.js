@@ -12,7 +12,6 @@ var PADDLE_HEIGHT = $('#paddle-left').height();
 var BALL_SIZE = $('#ball').width();
 var GAME_WIDTH = $('#board').width();
 var GAME_HEIGHT = $('#board').height();
-
 var KEY = {
   W: 87,
   D: 83,
