@@ -38,14 +38,15 @@ var updateInterval, isPaused;
 ////////////////////////////// GAME SETUP //////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 
-setInitialPositions();
-startGame();
+init();
 
-function startGame() {  
+function init() {  
+  // position the paddles and the ball
   setInitialPositions();
 
+  keysDown = {};
+
   // turn on keyboard inputs
-  keysDown = {}
   $(document).on('keydown', handleKeyDown);
   $(document).on('keyup', handleKeyUp);
   
@@ -54,13 +55,17 @@ function startGame() {
   isPaused = false;
 }
 
-function setInitialPositions(winningPaddle) {
+/* Sets starting positions of the paddles and the ball
+and randomly chooses the inital direction of the ball */
+function setInitialPositions() {
   // set Initial positions of the paddles
   moveObjectTo(paddleLeft, 0, GAME_HEIGHT / 2 - (PADDLE_HEIGHT / 2));
   moveObjectTo(paddleRight, GAME_WIDTH - PADDLE_WIDTH, GAME_HEIGHT / 2 - (PADDLE_HEIGHT / 2));
   
-  // set initial position + randomize direction of ball
+  // set initial position of the ball
   moveObjectTo(ball, GAME_WIDTH / 2, GAME_HEIGHT / 2);
+  
+  // randomize horizontal direction of ball
   ball.directionX = Math.random() > 0.5 ? -1 : 1;
   ball.directionY = 0;
 }
@@ -116,11 +121,9 @@ function checkForBounce() {
 function checkForScore() {
   // If the ball exits through either side, end the game
   if (ball.x < 0) {
-    score.right++;
-    reset();
+    reset("right");
   } else if (ball.x > GAME_WIDTH) {
-    score.left++;
-    reset();
+    reset("left");
   }
 }
 
@@ -131,6 +134,10 @@ function moveBall() {
   moveObjectTo(ball, newPositionX, newPositionY);
 }
 
+/**
+ * Moves the left and right paddles if any of the movement keys are actively
+ * being pressed: W / D or Up / Down
+ */
 function movePaddles() {
   // left paddle
   if (keysDown[KEY.W]) {
@@ -146,15 +153,30 @@ function movePaddles() {
     movePaddleDown(paddleRight);
   }
   
+  /**
+   * Moves the paddle up until it hits the top of the screen.
+   * @param {Object} paddle 
+   */
   function movePaddleUp(paddle) {
-    moveObjectTo(paddle, paddle.x, Math.max(0, paddle.y - PADDLE_SPEED));
+    moveObjectTo(paddle, paddle.x, Math.max(paddle.y - PADDLE_SPEED, 0));
   }
   
+  /**
+   * Moves the paddle down until it hits the bottom of the screen.
+   * @param {Object} paddle 
+   */
   function movePaddleDown(paddle) {
     moveObjectTo(paddle, paddle.x,  Math.min(paddle.y + PADDLE_SPEED, GAME_HEIGHT - PADDLE_HEIGHT));
   }
 }
 
+/**
+ * Sets the x and y properties of the Object. Moves the jQuery element 
+ * held by the Object to the specified coordinates.
+ * @param {Object} object : The object to move
+ * @param {Number} x : The x coordinate to move the object to
+ * @param {Number} y : The y coordinate to move the object to
+ */
 function moveObjectTo(object, x, y) {
   object.x = x;
   object.y = y;
@@ -162,13 +184,16 @@ function moveObjectTo(object, x, y) {
   object.element.css('left', x);
 }
 
-function reset() {
-  setInitialPositions();
-  
-  // display the proper score
+/* 
+This Function resets the game. It may be called when the game is over
+and a new game should be started.
+*/
+function reset(pointWinner) {  
+  // update and display the score
+  score[pointWinner]++;
   score.element.text(score.left + " : " + score.right);
 
-  // stop update function from running
+  // stop updateInterval
   clearInterval(updateInterval);
 
   // turn off keyboard inputs
@@ -180,7 +205,7 @@ function reset() {
     // anything else you might want to do between points...
 
     // reset positions of Objects
-    startGame();
+    init();
   }, 500);
  
 }
@@ -191,29 +216,53 @@ function reset() {
 ////////////////////////////////////////////////////////////////////////////////
 
 /* 
+This Function is the Callback Function for 'keydown' events.
+
+The moment when a key is pressed, its KeyCode is registered in 
+the keysDown Object with the value true to indicate that the
+key is actively being pressed.
+
+If the P button is pressed, pause the game
+
 event.which returns the keycode of the key that is pressed when the
 keydown event occurs
 */
 function handleKeyDown(event) {
-  keysDown[event.which] = true;
-  
   if (event.which === KEY.P) {
     pause();
+    return;
   }
+
+  keysDown[event.which] = true;
 }
 
+/* 
+This Function is the Callback Function for 'keyup' events.
+
+When a key is released, delete that key from the keysDown Object as
+it is no longer actively being pressed.
+*/
 function handleKeyUp(event) {
   delete keysDown[event.which];
 }
 
+/* 
+This Function, when called, will pause the game by turning off/on the
+updateInterval ticking timer
+*/
 function pause() {
+  // Show/Hide the "Paused" message
   $('#paused').toggle();
   
-  if (isPaused) {
-    updateInterval = setInterval(update, REFRESH_RATE) 
-  } else {
+  // if the game is not currently paused, stop the ticking timer interval
+  // otherwise start it up again and save the interval ID in updateInterval
+  if (!isPaused) {
     clearInterval(updateInterval)
+  } 
+  else {
+    updateInterval = setInterval(update, REFRESH_RATE) 
   }
 
+  // flip the value of isPaused
   isPaused = !isPaused;
 }
