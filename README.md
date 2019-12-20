@@ -2,8 +2,6 @@ Note: These project instructions are written for Mac OSX
 
 # Pong
 
-<a href = "https://jsbin.com/kumifavazi/1/edit?output" target="_blank"> Play it here:  (Right Click -> Open Link in New Tab)</a>
-
 #### To download this project into your workspace:
 
 First locate the folder in which you would like to download this code. If you need a lesson on how to navigate your file system using the Terminal, see the link below:
