@@ -4,9 +4,10 @@
 ///////////////////////// INITIALIZATION ///////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 
+// Constant Variables
 var REFRESH_RATE = 20;
 var PADDLE_SPEED = 6;
-var BALL_SPEED = 5;
+var BALL_SPEED = 6;
 var PADDLE_WIDTH = $('#paddle-left').width();
 var PADDLE_HEIGHT = $('#paddle-left').height();
 var BALL_SIZE = $('#ball').width();
@@ -20,6 +21,7 @@ var KEY = {
   P: 80
 };
 
+// Game Variables
 var paddleLeft = {}, paddleRight = {};
 paddleLeft.element = $('#paddle-left');
 paddleRight.element = $('#paddle-right');
@@ -31,7 +33,7 @@ var score = {};
 score.element = $('#score');
 score.left = score.right = 0;
 
-var keysDown = {};
+var keysDown;
 var updateInterval, isPaused;
 
 startGame();
@@ -104,56 +106,32 @@ function reset() {
  */
 function checkAndHandleBounce() {
   // change vertical direction when bouncing off roof or floor
-  if (ball.y + BALL_SIZE > BOARD_HEIGHT || ball.y < 0) {
-    ball.directionY *= -1;
+  if (ball.y + BALL_SIZE > BOARD_HEIGHT) {
+    ball.directionY = -Math.abs(ball.directionY);
+  } else if (ball.y < 0) {
+    ball.directionY = Math.abs(ball.directionY);
   }
 
   // save which paddle the ball hit (if it hit either at all)
-  var paddleHit = null;
-  if (checkLeftPaddleBounce()) {
+  var paddleHit = null, newDirectionX;
+  if (checkLeftPaddleCollision()) {
     paddleHit = paddleLeft;
-  } else if (checkRightPaddleBounce()) {
+    newDirectionX = 1;
+  } else if (checkRightPaddleCollision()) {
     paddleHit = paddleRight;
+    newDirectionX = -1;
   }
 
   // if it did, change the direction of the ball
   if (paddleHit) {
-    ball.directionX *= -1;
+    ball.directionX = newDirectionX;
     ball.directionY = getNewDirectionY(paddleHit, ball);
   }
 }
 
-function checkLeftPaddleBounce() {
-  return (ball.x < paddleLeft.x + PADDLE_WIDTH) 
-    && (ball.y + BALL_SIZE > paddleLeft.y) 
-    && (ball.y < paddleLeft.y + PADDLE_HEIGHT)
-}
-
-function checkRightPaddleBounce() {
-  return (ball.x + BALL_SIZE > paddleRight.x) 
-    && (ball.y + BALL_SIZE > paddleRight.y) 
-    && (ball.y < paddleRight.y + PADDLE_HEIGHT)
-}
-
 /**
- * 
- * @param {*} paddle the paddle off which the ball hit
- */
-function getNewDirectionY(paddle) {
-  var paddleMiddle = paddle.y + (PADDLE_HEIGHT / 2);
-
-  var distanceFromMiddle = Math.abs(ball.y + (BALL_SIZE / 2) - paddleMiddle);
-  var magnitude = distanceFromMiddle / (PADDLE_HEIGHT / 2);
-
-  if (ball.y + (BALL_SIZE / 2) < paddleMiddle) {
-    return -1 * magnitude;
-  } else {
-    return 1 * magnitude;
-  }
-}
-
-/**
- * If the ball exits through either side, end the game
+ * If the ball exits through either side, increase the score of the winner
+ * and reset the game
  */
 function checkAndHandleScore() {
   var winner = "";
@@ -167,16 +145,36 @@ function checkAndHandleScore() {
     increaseScore(winner);
     reset();
   }
+}
 
+function checkLeftPaddleCollision() {
+  return (ball.x < paddleLeft.x + PADDLE_WIDTH) 
+    && (ball.y + BALL_SIZE > paddleLeft.y) 
+    && (ball.y < paddleLeft.y + PADDLE_HEIGHT)
+}
+
+function checkRightPaddleCollision() {
+  return (ball.x + BALL_SIZE > paddleRight.x) 
+    && (ball.y + BALL_SIZE > paddleRight.y) 
+    && (ball.y < paddleRight.y + PADDLE_HEIGHT)
 }
 
 /**
- * Increases the score of the point winner by modifying the `score` global Object
+ * The further away from the middle of the paddle the ball is
+ * when it hits the paddle, the sharper the angle of the bounce
+ * @param {*} paddle the paddle off which the ball hit
  */
-function increaseScore(pointWinner) {
-  // update and display the score
-  score[pointWinner]++;
-  score.element.text(score.left + " : " + score.right);
+function getNewDirectionY(paddle) {
+  /* The displacement of the ball is the distance between the middle 
+  of the ball and the middle of the paddle */
+  var paddleMiddleY = paddle.y + (PADDLE_HEIGHT / 2);
+  var ballMiddleY = ball.y + (BALL_SIZE / 2);
+  var displacementY = ballMiddleY - paddleMiddleY;
+
+  /* The magnitude is the % of the displacement of half the paddle height 
+  This may be modified to change how the angle is calculated. */
+  var magnitude = displacementY / (PADDLE_HEIGHT / 2);
+  return magnitude;
 }
 
 /**
@@ -202,6 +200,15 @@ function handleKeyDown(event) {
  */
 function handleKeyUp(event) {
   delete keysDown[event.which];
+}
+
+/**
+ * Increases the score of the point winner by modifying the `score` global Object
+ */
+function increaseScore(pointWinner) {
+  // update and display the score
+  score[pointWinner]++;
+  score.element.text(score.left + " : " + score.right);
 }
 
 /**
@@ -247,22 +254,22 @@ function movePaddles() {
   } else if (keysDown[KEY.DOWN]) {
     movePaddleDown(paddleRight);
   }
-  
-  /**
-   * Moves the paddle up until it hits the top of the screen.
-   * @param {Object} paddle 
-   */
-  function movePaddleUp(paddle) {
-    moveObjectTo(paddle, paddle.x, Math.max(paddle.y - PADDLE_SPEED, 0));
-  }
-  
-  /**
-   * Moves the paddle down until it hits the bottom of the screen.
-   * @param {Object} paddle 
-   */
-  function movePaddleDown(paddle) {
-    moveObjectTo(paddle, paddle.x,  Math.min(paddle.y + PADDLE_SPEED, BOARD_HEIGHT - PADDLE_HEIGHT));
-  }
+}
+
+/**
+ * Moves the paddle up until it hits the top of the screen.
+ * @param {Object} paddle 
+ */
+function movePaddleUp(paddle) {
+  moveObjectTo(paddle, paddle.x, Math.max(paddle.y - PADDLE_SPEED, 0));
+}
+
+/**
+ * Moves the paddle down until it hits the bottom of the screen.
+ * @param {Object} paddle 
+ */
+function movePaddleDown(paddle) {
+  moveObjectTo(paddle, paddle.x,  Math.min(paddle.y + PADDLE_SPEED, BOARD_HEIGHT - PADDLE_HEIGHT));
 }
 
 /* 
