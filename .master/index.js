@@ -10,8 +10,8 @@ var BALL_SPEED = 5;
 var PADDLE_WIDTH = $('#paddle-left').width();
 var PADDLE_HEIGHT = $('#paddle-left').height();
 var BALL_SIZE = $('#ball').width();
-var GAME_WIDTH = $('#board').width();
-var GAME_HEIGHT = $('#board').height();
+var BOARD_WIDTH = $('#board').width();
+var BOARD_HEIGHT = $('#board').height();
 var KEY = {
   W: 87,
   D: 83,
@@ -44,6 +44,11 @@ function startGame() {
   // position the paddles and the ball
   setInitialPositions();
 
+  // randomize initial ball.directionX
+  ball.directionX = Math.random() > 0.5 ? -1 : 1;
+  ball.directionY = 0;
+
+  // empty the keysDown 
   keysDown = {};
 
   // turn on keyboard inputs
@@ -60,11 +65,11 @@ function startGame() {
  * collisions with the walls.
  */
 function update() {
-  movePaddles(paddleLeft, paddleRight);
-  moveBall(ball);
+  movePaddles();
+  moveBall();
 
-  checkAndHandleBounce(ball);
-  checkAndHandleScore(ball);
+  checkAndHandleBounce();
+  checkAndHandleScore();
 }
 
 /* 
@@ -97,36 +102,43 @@ function reset() {
  * getNewDirectionY calculates the new angle based on where
  * along the paddle the ball hits
  */
-function checkAndHandleBounce(ball) {
+function checkAndHandleBounce() {
   // change vertical direction when bouncing off roof or floor
-  if (ball.y + BALL_SIZE > GAME_HEIGHT || ball.y < 0) {
+  if (ball.y + BALL_SIZE > BOARD_HEIGHT || ball.y < 0) {
     ball.directionY *= -1;
   }
 
-  // change horizontal direction when bouncing off either paddle
-  // also change vertical direction based on where on the paddle the ball hits
-  if (checkLeftPaddleBounce(ball)) {
-    ball.directionX *= -1;
-    ball.directionY = getNewDirectionY(paddleLeft);
+  // save which paddle the ball hit (if it hit either at all)
+  var paddleHit = null;
+  if (checkLeftPaddleBounce()) {
+    paddleHit = paddleLeft;
+  } else if (checkRightPaddleBounce()) {
+    paddleHit = paddleRight;
   }
-  else if (checkRightPaddleBounce(ball)) {
+
+  // if it did, change the direction of the ball
+  if (paddleHit) {
     ball.directionX *= -1;
-    ball.directionY = getNewDirectionY(paddleRight);
+    ball.directionY = getNewDirectionY(paddleHit, ball);
   }
 }
 
-function checkLeftPaddleBounce(ball) {
+function checkLeftPaddleBounce() {
   return (ball.x < paddleLeft.x + PADDLE_WIDTH) 
-    && (ball.y > paddleLeft.y) 
+    && (ball.y + BALL_SIZE > paddleLeft.y) 
     && (ball.y < paddleLeft.y + PADDLE_HEIGHT)
 }
 
-function checkRightPaddleBounce(ball) {
+function checkRightPaddleBounce() {
   return (ball.x + BALL_SIZE > paddleRight.x) 
-    && (ball.y > paddleRight.y) 
+    && (ball.y + BALL_SIZE > paddleRight.y) 
     && (ball.y < paddleRight.y + PADDLE_HEIGHT)
 }
 
+/**
+ * 
+ * @param {*} paddle the paddle off which the ball hit
+ */
 function getNewDirectionY(paddle) {
   var paddleMiddle = paddle.y + (PADDLE_HEIGHT / 2);
 
@@ -143,19 +155,28 @@ function getNewDirectionY(paddle) {
 /**
  * If the ball exits through either side, end the game
  */
-function checkAndHandleScore(ball) {
+function checkAndHandleScore() {
+  var winner = "";
   if (ball.x < 0) {
-    increaseScore("right");
-  } else if (ball.x > GAME_WIDTH) {
-    increaseScore("left");
+    winner = "right";
+  } else if (ball.x + BALL_SIZE > BOARD_WIDTH) {
+    winner = "left";
   }
+
+  if (winner) {
+    increaseScore(winner);
+    reset();
+  }
+
 }
 
+/**
+ * Increases the score of the point winner by modifying the `score` global Object
+ */
 function increaseScore(pointWinner) {
   // update and display the score
   score[pointWinner]++;
   score.element.text(score.left + " : " + score.right);
-  reset();
 }
 
 /**
@@ -187,7 +208,7 @@ function handleKeyUp(event) {
  * Calculate the next position of the ball based on the current
  * position and direction of the ball and the BALL_SPEED constant.
  */
-function moveBall(ball) {
+function moveBall() {
   var newPositionX = ball.x + BALL_SPEED * ball.directionX;
   var newPositionY = ball.y + BALL_SPEED * ball.directionY;
 
@@ -212,7 +233,7 @@ function moveObjectTo(object, x, y) {
  * Moves the left and right paddles if any of the movement keys are actively
  * being pressed: W / D or Up / Down
  */
-function movePaddles(paddleLeft, paddleRight) {
+function movePaddles() {
   // left paddle
   if (keysDown[KEY.W]) {
     movePaddleUp(paddleLeft);
@@ -240,7 +261,7 @@ function movePaddles(paddleLeft, paddleRight) {
    * @param {Object} paddle 
    */
   function movePaddleDown(paddle) {
-    moveObjectTo(paddle, paddle.x,  Math.min(paddle.y + PADDLE_SPEED, GAME_HEIGHT - PADDLE_HEIGHT));
+    moveObjectTo(paddle, paddle.x,  Math.min(paddle.y + PADDLE_SPEED, BOARD_HEIGHT - PADDLE_HEIGHT));
   }
 }
 
@@ -268,14 +289,15 @@ function pause() {
 /* Sets starting positions of the paddles and the ball
 and randomly chooses the inital direction of the ball */
 function setInitialPositions() {
-  // set Initial positions of the paddles
-  moveObjectTo(paddleLeft, 0, GAME_HEIGHT / 2 - (PADDLE_HEIGHT / 2));
-  moveObjectTo(paddleRight, GAME_WIDTH - PADDLE_WIDTH, GAME_HEIGHT / 2 - (PADDLE_HEIGHT / 2));
-  
-  // set initial position of the ball
-  moveObjectTo(ball, GAME_WIDTH / 2, GAME_HEIGHT / 2);
-  
-  // randomize horizontal direction of ball
-  ball.directionX = Math.random() > 0.5 ? -1 : 1;
-  ball.directionY = 0;
+  var boardMiddleY = BOARD_HEIGHT / 2,
+    boardMiddleX = BOARD_WIDTH / 2;
+
+  var leftPaddleXi = 0,
+    leftPaddleYi = boardMiddleY - (PADDLE_HEIGHT / 2),
+    rightPaddleXi = BOARD_WIDTH - PADDLE_WIDTH,
+    rightPaddleYi = boardMiddleY - (PADDLE_HEIGHT / 2);
+
+  moveObjectTo(paddleLeft, leftPaddleXi, leftPaddleYi);
+  moveObjectTo(paddleRight, rightPaddleXi, rightPaddleYi);
+  moveObjectTo(ball, boardMiddleX, boardMiddleY);
 }
