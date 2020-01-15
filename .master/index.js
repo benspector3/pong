@@ -13,28 +13,31 @@ var PADDLE_HEIGHT = $('#paddle-left').height();
 var BALL_SIZE = $('#ball').width();
 var BOARD_WIDTH = $('#board').width();
 var BOARD_HEIGHT = $('#board').height();
-var KEY = {
-  W: 87,
-  D: 83,
-  UP: 38,
-  DOWN: 40,
-  P: 80
+var KEY_CODE = {
+  "W": 87,
+  "D": 83,
+  "UP": 38,
+  "DOWN": 40,
+  "P": 80
 };
 
 // Game Variables
-var paddleLeft = {}, paddleRight = {};
-paddleLeft.element = $('#paddle-left');
-paddleRight.element = $('#paddle-right');
+var paddleLeft = {};
+paddleLeft.$element = $('#paddle-left');
+
+var paddleRight = {};
+paddleRight.$element = $('#paddle-right');
 
 var ball = {};
-ball.element = $('#ball');
+ball.$element = $('#ball');
 
 var score = {};
-score.element = $('#score');
+score.$element = $('#score');
 score.left = score.right = 0;
 
 var keysDown;
-var updateInterval, isPaused;
+var updateInterval
+var isPaused;
 
 startGame();
 
@@ -106,9 +109,12 @@ function reset() {
  */
 function checkAndHandleBounce() {
   // change vertical direction when bouncing off roof or floor
-  if (ball.y + BALL_SIZE > BOARD_HEIGHT) {
+  var maxBallY = BOARD_HEIGHT - BALL_SIZE;
+  var minBallY = 0;
+
+  if (ball.y > maxBallY) {
     ball.directionY = -Math.abs(ball.directionY);
-  } else if (ball.y < 0) {
+  } else if (ball.y < minBallY) {
     ball.directionY = Math.abs(ball.directionY);
   }
 
@@ -134,10 +140,13 @@ function checkAndHandleBounce() {
  * and reset the game
  */
 function checkAndHandleScore() {
-  var winner = "";
-  if (ball.x < 0) {
+  var maxBallX = BOARD_WIDTH - BALL_SIZE;
+  var minBallX = 0;
+  
+  var winner;
+  if (ball.x < minBallX) {
     winner = "right";
-  } else if (ball.x + BALL_SIZE > BOARD_WIDTH) {
+  } else if (ball.x > maxBallX) {
     winner = "left";
   }
 
@@ -185,7 +194,7 @@ function getNewDirectionY(paddle) {
  * is unregistered when the `keyup` event occurs (see `handleKeyUp` below)
  */
 function handleKeyDown(event) {
-  if (event.which === KEY.P) {
+  if (event.which === KEY_CODE.P) {
     pause();
     return;
   }
@@ -208,7 +217,7 @@ function handleKeyUp(event) {
 function increaseScore(pointWinner) {
   // update and display the score
   score[pointWinner]++;
-  score.element.text(score.left + " : " + score.right);
+  score.$element.text(score.left + " : " + score.right);
 }
 
 /**
@@ -223,17 +232,17 @@ function moveBall() {
 }
 
 /**
- * Sets the x and y properties of the Object. Moves the jQuery element 
+ * Sets the x and y properties of the Object and moves the jQuery element 
  * held by the Object to the specified coordinates.
- * @param {Object} object : The object to move
- * @param {Number} x : The x coordinate to move the object to
- * @param {Number} y : The y coordinate to move the object to
+ * @param {Object} object : The object to move.
+ * @param {Number} newX : The x coordinate to move the object to
+ * @param {Number} newY : The y coordinate to move the object to
  */
-function moveObjectTo(object, x, y) {
-  object.x = x;
-  object.y = y;
-  object.element.css('top', y);
-  object.element.css('left', x);
+function moveObjectTo(object, newX, newY) {
+  object.x = newX;
+  object.y = newY;
+  object.$element.css('left', newX);
+  object.$element.css('top', newY);
 }
 
 /**
@@ -242,16 +251,16 @@ function moveObjectTo(object, x, y) {
  */
 function movePaddles() {
   // left paddle
-  if (keysDown[KEY.W]) {
+  if (keysDown[KEY_CODE.W]) {
     movePaddleUp(paddleLeft);
-  } else if (keysDown[KEY.D]) {
+  } else if (keysDown[KEY_CODE.D]) {
     movePaddleDown(paddleLeft);
   }
   
   // right paddle
-  if (keysDown[KEY.UP]) {
+  if (keysDown[KEY_CODE.UP]) {
     movePaddleUp(paddleRight);
-  } else if (keysDown[KEY.DOWN]) {
+  } else if (keysDown[KEY_CODE.DOWN]) {
     movePaddleDown(paddleRight);
   }
 }
@@ -261,7 +270,10 @@ function movePaddles() {
  * @param {Object} paddle 
  */
 function movePaddleUp(paddle) {
-  moveObjectTo(paddle, paddle.x, Math.max(paddle.y - PADDLE_SPEED, 0));
+  var minPaddleY = 0;
+  var newPaddleX = paddle.x;
+  var newPaddleY = paddle.y - PADDLE_SPEED;
+  moveObjectTo(paddle, newPaddleX, Math.max(newPaddleY, minPaddleY));
 }
 
 /**
@@ -269,7 +281,10 @@ function movePaddleUp(paddle) {
  * @param {Object} paddle 
  */
 function movePaddleDown(paddle) {
-  moveObjectTo(paddle, paddle.x,  Math.min(paddle.y + PADDLE_SPEED, BOARD_HEIGHT - PADDLE_HEIGHT));
+  var maxPaddleY = BOARD_HEIGHT - PADDLE_HEIGHT;
+  var newPaddleX = paddle.x;
+  var newPaddleY = paddle.y + PADDLE_SPEED;
+  moveObjectTo(paddle, newPaddleX, Math.min(newPaddleY, maxPaddleY));
 }
 
 /* 
