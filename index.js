@@ -29,21 +29,15 @@ $(document).ready(function(){
   };
   
   // Game Variables
-  
   var score = {
     'left': 0,
     'right': 0
   };
   
-  // start update interval
-  var updateInterval = setInterval(update, REFRESH_RATE);
-
-  // turn on keyboard inputs
-  $(document).on('keydown', handleKeyDown);
-  $(document).on('keyup', handleKeyUp);
+  var updateInterval;
 
   serve("right"); 
-
+  
   function serve(winner) {
     alert(winner + " is serving");
     
@@ -72,6 +66,12 @@ $(document).ready(function(){
     
     // display the score
     $score.text(score.left + " : " + score.right);
+
+    // start update interval and turn on keyboard inputs
+    updateInterval = setInterval(update, REFRESH_RATE);
+    $(document).on('keydown', handleKeyDown);
+    $(document).on('keyup', handleKeyUp);
+
   }
   
   ////////////////////////////////////////////////////////////////////////////////
@@ -216,6 +216,11 @@ $(document).ready(function(){
   
   function resolvePoint(winner) {
     score[winner]++;
+    
+    // stop the timer and turn off keyboard events
+    clearInterval(updateInterval);
+    $(document).off();
+
     if (score[winner] === 11) {
       endGame(winner);
     } else {
@@ -224,8 +229,6 @@ $(document).ready(function(){
   }
   
   function endGame(winner) {
-    clearInterval(updateInterval);
-    $(document).off();
     alert(winner + " wins!");
   }
   
