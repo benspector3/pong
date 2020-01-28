@@ -119,15 +119,12 @@ $(document).ready(function(){
   function getGameObject(id) {
     var obj = {};
     obj.$element = $(id);
-    obj.width = $(obj.$element).width();
+    obj.width = obj.$element.width();
     obj.height = obj.$element.height();
-    obj.x = obj.y = 0;
-    obj.velocityX = obj.velocityY = 0;
-    obj.move = function() {
-      obj.$element.css('left', obj.x);
-      obj.$element.css('top', obj.y);
-    }
-    
+    obj.x = 0;
+    obj.y = 0;
+    obj.velocityX = 0;
+    obj.velocityY = 0;
     return obj;
   }
 
@@ -137,11 +134,13 @@ $(document).ready(function(){
     // move the paddles but prevent them from moving off the screen
     paddleLeft.y += paddleLeft.velocityY;
     paddleLeft.y = Math.max(Math.min(paddleLeft.y, BOARD_HEIGHT - paddleLeft.height), 0);
-    paddleLeft.move();
+    paddleLeft.$element.css('left', paddleLeft.x);
+    paddleLeft.$element.css('top', paddleLeft.y);
     
     paddleRight.y += paddleRight.velocityY;
     paddleRight.y = Math.max(Math.min(paddleRight.y, BOARD_HEIGHT - paddleRight.height), 0);
-    paddleRight.move();
+    paddleRight.$element.css('left', paddleRight.x);
+    paddleRight.$element.css('top', paddleRight.y);
   }
   
   /**
@@ -151,7 +150,8 @@ $(document).ready(function(){
   function moveBall() {
     ball.x += ball.velocityX;
     ball.y += ball.velocityY;
-    ball.move();
+    ball.$element.css('left', ball.x);
+    ball.$element.css('top', ball.y);
   }
   
   /* Bouncing */
