@@ -112,7 +112,7 @@ $(document).ready(function(){
       bounceOffTopBottom();
     }
     
-    var winner = hasPlayerWonPoint();
+    var winner = checkForWinner();
     if (winner !== "") {
       resolvePoint(winner);
     }
@@ -194,7 +194,7 @@ $(document).ready(function(){
   }
   
   /* Scoring Helper Functions */
-  function hasPlayerWonPoint() {
+  function checkForWinner() {
     var winner = "";
     if (ball.x < 0) {
       winner = "right";
