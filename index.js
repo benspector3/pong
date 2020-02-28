@@ -195,7 +195,7 @@ $(document).ready(function(){
   
   /* Scoring Helper Functions */
   function checkForWinner() {
-    var winner = "";
+    var winner = null;
     if (ball.x < 0) {
       winner = "right";
     } else if (ball.x > BOARD_WIDTH - ball.width) {
