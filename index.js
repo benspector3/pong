@@ -113,7 +113,7 @@ $(document).ready(function(){
     }
     
     var winner = checkForWinner();
-    if (winner !== "") {
+    if (winner !== null) {
       resolvePoint(winner);
     }
   }
