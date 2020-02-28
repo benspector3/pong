@@ -16,11 +16,11 @@ body {
   background-color:#e66666;
 }
 
-#score, #paused {
+#score, #pause {
   color: white;
 }
 
-#paused {
+#pause {
   display: none;
 }
 

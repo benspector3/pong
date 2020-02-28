@@ -5,14 +5,30 @@ $(document).ready(function(){
   ///////////////////////// INITIALIZATION ///////////////////////////////////////
   ////////////////////////////////////////////////////////////////////////////////
   
+  /**
+   * Factory function that returns an Object to contain a HTML DOM element.
+   * The input should be the CSS selector
+   */
+  function GameItem(selector) {
+    var obj = {};
+    obj.$element = $(selector);
+    obj.width = obj.$element.width();
+    obj.height = obj.$element.height();
+    obj.x = 0;
+    obj.y = 0;
+    obj.velocityX = 0;
+    obj.velocityY = 0;
+    return obj;
+  }
+
   // jQuery objects
   var $board = $('#board');
   var $score = $("#score");
   
   // factory function Objects
-  var ball = getGameObject('#ball');
-  var paddleLeft = getGameObject('#paddle-left');
-  var paddleRight = getGameObject('#paddle-right');
+  var ball = GameItem('#ball');
+  var paddleLeft = GameItem('#paddle-left');
+  var paddleRight = GameItem('#paddle-right');
   
   // Constant Variables
   var REFRESH_RATE = 20;
@@ -35,12 +51,13 @@ $(document).ready(function(){
   };
   
   var updateInterval;
+  var paused = false;
 
-  serve("right"); 
-  
+  // challenge: randomize this value
+  serve(Math.random() > 0.5 ? "right" : "left"); 
+
+  /** Iniitalizes the positions of DOM elements and starts the ball moving */
   function serve(winner) {
-    alert(winner + " is serving");
-    
     // position left paddle and set the velocity to 0
     paddleLeft.x = 0;
     paddleLeft.y = (BOARD_HEIGHT / 2) - (paddleLeft.height / 2);
@@ -51,6 +68,10 @@ $(document).ready(function(){
     paddleRight.y = (BOARD_HEIGHT / 2) - (paddleRight.height / 2);
     paddleRight.velocityY = 0;
     
+    // the ball starts in the middle of the screen and has no vertical velocity
+    ball.y = (BOARD_HEIGHT / 2);
+    ball.velocityY = 0;
+    
     // Position the ball to serve from the winner side (first winner is chosen randomly)
     if (winner === "left") {
       ball.x = paddleLeft.x + paddleLeft.width;
@@ -60,18 +81,11 @@ $(document).ready(function(){
       ball.velocityX = -BALL_SPEED;
     }
     
-    // the ball starts in the middle of the screen and has no vertical velocity
-    ball.y = (BOARD_HEIGHT / 2);
-    ball.velocityY = 0;
     
-    // display the score
+    // display the score, alert a new server, turn on keyboard and timer events
     $score.text(score.left + " : " + score.right);
-
-    // start update interval and turn on keyboard inputs
-    updateInterval = setInterval(update, REFRESH_RATE);
-    $(document).on('keydown', handleKeyDown);
-    $(document).on('keyup', handleKeyUp);
-
+    alert(winner + " is serving");
+    turnOnEvents();
   }
   
   ////////////////////////////////////////////////////////////////////////////////
@@ -82,23 +96,24 @@ $(document).ready(function(){
   * On each update tick update each bubble's position and check for
   * collisions with the walls.
   */
- function update() {
-   movePaddles();
-   moveBall();
-   
-   if (objectsCollide(ball, paddleLeft)) {
-     bounceOffPaddle(paddleLeft)
+  function update() {
+    moveGameItem(paddleLeft);
+    moveGameItem(paddleRight);
+    moveGameItem(ball);
+
+    if (doCollide(ball, paddleLeft)) {
+      bounceOffPaddle(paddleLeft)
     } 
-    else if (objectsCollide(ball, paddleRight)) {
+    else if (doCollide(ball, paddleRight)) {
       bounceOffPaddle(paddleRight);
     }
     
-    if (hasHitFloorOrCeiling()) {
-      bounceOffFloorOrCeiling();
+    if (hasCollidedTopBottom()) {
+      bounceOffTopBottom();
     }
     
     var winner = hasPlayerWonPoint();
-    if (winner) {
+    if (winner !== "") {
       resolvePoint(winner);
     }
   }
@@ -107,59 +122,30 @@ $(document).ready(function(){
   ///////////////////////////// HELPER FUNCTIONS /////////////////////////////////
   ////////////////////////////////////////////////////////////////////////////////
   
-   /**
-   * Factory function that returns an Object with the following properties:
-   * - $element <Object>: jQuery Object of the HTML element with the given id
-   * - width <Number>: width of the HTML element
-   * - height <Number>: height of the HTML element
-   * - x <Number>: the x-coordinate for the top left corner of the object
-   * - y <Number>: the y-coordinate for the top left corner of the object
-   * - move <Function>: move the $element to the current x,y coordinate 
-   */
-  function getGameObject(id) {
-    var obj = {};
-    obj.$element = $(id);
-    obj.width = obj.$element.width();
-    obj.height = obj.$element.height();
-    obj.x = 0;
-    obj.y = 0;
-    obj.velocityX = 0;
-    obj.velocityY = 0;
-    return obj;
-  }
+  /* setup helper functions */
 
-  /* Movement */
-  
-  function movePaddles() { 
-    // move the paddles but prevent them from moving off the screen
-    paddleLeft.y += paddleLeft.velocityY;
-    paddleLeft.y = Math.max(Math.min(paddleLeft.y, BOARD_HEIGHT - paddleLeft.height), 0);
-    paddleLeft.$element.css('left', paddleLeft.x);
-    paddleLeft.$element.css('top', paddleLeft.y);
-    
-    paddleRight.y += paddleRight.velocityY;
-    paddleRight.y = Math.max(Math.min(paddleRight.y, BOARD_HEIGHT - paddleRight.height), 0);
-    paddleRight.$element.css('left', paddleRight.x);
-    paddleRight.$element.css('top', paddleRight.y);
+  /* Movement helper functions */
+  function moveGameItem(obj) {
+    obj.x += obj.velocityX;
+    obj.y += obj.velocityY;
+    obj.$element.css('left', obj.x);
+    obj.$element.css('top', obj.y);
+
+    if (obj.y > BOARD_HEIGHT - obj.height) {
+      obj.y = BOARD_HEIGHT - obj.height;
+
+    }
+    if (obj.y < 0) {
+      obj.y = 0;
+    }
   }
   
-  /**
-   * Calculate the next position of the ball based on the current
-   * position and direction of the ball and the BALL_SPEED constant.
-   */
-  function moveBall() {
-    ball.x += ball.velocityX;
-    ball.y += ball.velocityY;
-    ball.$element.css('left', ball.x);
-    ball.$element.css('top', ball.y);
-  }
-  
-  /* Bouncing */
+  /* Collisions/Bouncing helper functions*/
   
   /**
    * Returns true if two objects overlap, false otherwise. Assume each object is rectangular.
    */
-  function objectsCollide(obj1, obj2) {
+  function doCollide(obj1, obj2) {
     var left1 = { "x": obj1.x, "y": obj1.y };
     var right1 = { "x": obj1.x + obj1.width, "y": obj1.y + obj1.height};
     var left2 = { "x": obj2.x, "y": obj2.y };
@@ -179,6 +165,7 @@ $(document).ready(function(){
   }
   
   function bounceOffPaddle(paddle) {
+
     // bounce off the paddle horizontally
     ball.velocityX *= -1;
     
@@ -190,36 +177,39 @@ $(document).ready(function(){
     
     // bounce off the paddle at an angle 
     ball.velocityY = BALL_SPEED * magnitude;
+
   }
-  
-  function hasHitFloorOrCeiling() {
+
+  function hasCollidedTopBottom() {
     var maxBallY = BOARD_HEIGHT - ball.height;
     var minBallY = 0;
-    return ball.y > maxBallY || ball.y < minBallY;
+    if (ball.y >= maxBallY || ball.y <= minBallY) {
+      return true;
+    }
   }
   
   // change only vertical direction when bouncing off roof or floor
-  function bounceOffFloorOrCeiling() {
+  function bounceOffTopBottom() {
     ball.velocityY = -ball.velocityY;
   }
   
-  /* Scoring */
-  
+  /* Scoring Helper Functions */
   function hasPlayerWonPoint() {
+    var winner = "";
     if (ball.x < 0) {
-      return "right";
+      winner = "right";
     } else if (ball.x > BOARD_WIDTH - ball.width) {
-      return "left";
+      winner = "left";
     }
-    return "";
+    return winner;
   }
-  
+
   function resolvePoint(winner) {
-    score[winner]++;
-    
     // stop the timer and turn off keyboard events
-    clearInterval(updateInterval);
-    $(document).off();
+    turnOffEvents();
+    
+    // increase the score and check for an end game, serve otherwise
+    score[winner]++;  
 
     if (score[winner] === 11) {
       endGame(winner);
@@ -231,9 +221,19 @@ $(document).ready(function(){
   function endGame(winner) {
     alert(winner + " wins!");
   }
+
+  function pause() {
+    if (paused) {
+      updateInterval = setInterval(update, REFRESH_RATE);
+    } else {
+      clearInterval(updateInterval);
+    }
+    $("#pause").toggle();
+    paused = !paused;
+  }
   
   ////////////////////////////////////////////////////////////////////////////////
-  ////////////////////////// KEYBOARD FUNCTIONS //////////////////////////////////
+  ////////////////////////// EVENT HANDLERS //////////////////////////////////
   ////////////////////////////////////////////////////////////////////////////////
   
   /**
@@ -242,6 +242,13 @@ $(document).ready(function(){
   function handleKeyDown(event) {
     var key = event.which;
     
+    if (key === KEY_CODE.P) {
+      pause();
+    }
+    if (paused) {
+      return;
+    }
+
     // move the left paddle
     if (key === KEY_CODE.W) {
       paddleLeft.velocityY = -PADDLE_SPEED;
@@ -255,9 +262,8 @@ $(document).ready(function(){
     } else if (key === KEY_CODE.DOWN) {
       paddleRight.velocityY = PADDLE_SPEED;
     }
-    
   }
-  
+
   /**
    * Called when the `keyup` event occurs.
    **/
@@ -273,5 +279,17 @@ $(document).ready(function(){
     if (key === KEY_CODE.UP || key === KEY_CODE.DOWN) {
       paddleRight.velocityY = 0;
     }
+  }
+
+  function turnOnEvents() {
+    // start update interval and turn on keyboard inputs
+    updateInterval = setInterval(update, REFRESH_RATE);
+    $(document).on('keydown', handleKeyDown);
+    $(document).on('keyup', handleKeyUp);
+  }
+
+  function turnOffEvents() {
+    clearInterval(updateInterval);
+    $(document).off();
   }
 });
